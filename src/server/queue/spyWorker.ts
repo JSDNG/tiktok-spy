@@ -26,11 +26,6 @@ export async function processPollJob(job: PollJob, deps: { provider: SpyProvider
 
   const result = await deps.provider.fetchResult(task.providerTaskId);
 
-  if (result.status === 'RUNNING' || result.status === 'PENDING') {
-    await job.moveToDelayed(Date.now() + env.POLL_INTERVAL_MS);
-    throw new DelayedError();
-  }
-
   if (result.status === 'FAILED') {
     await db.spyTask.update({
       where: { id: task.id },
@@ -39,5 +34,12 @@ export async function processPollJob(job: PollJob, deps: { provider: SpyProvider
     return;
   }
 
-  await persistResult({ spyTaskId: task.id, items: result.items });
+  if (result.status === 'SUCCEEDED') {
+    await persistResult({ spyTaskId: task.id, items: result.items });
+    return;
+  }
+
+  // result.status is 'PENDING' | 'RUNNING' — actor chưa xong, poll lại sau.
+  await job.moveToDelayed(Date.now() + env.POLL_INTERVAL_MS);
+  throw new DelayedError();
 }
