@@ -9,7 +9,7 @@ tiktok-spy/
 │   └── migrations/
 ├── worker.ts                     # entrypoint process worker (node worker.ts)
 ├── src/
-│   ├── middleware.ts              # chặn truy cập route (dashboard) khi chưa đăng nhập
+│   ├── proxy.ts                    # chặn truy cập route (dashboard) khi chưa đăng nhập (Next.js 16: "middleware" đổi tên thành "proxy")
 │   ├── app/                      # Next.js App Router
 │   │   ├── api/
 │   │   │   ├── trpc/[trpc]/route.ts
@@ -24,7 +24,8 @@ tiktok-spy/
 │   │   └── layout.tsx
 │   ├── server/
 │   │   ├── auth/
-│   │   │   ├── config.ts         # cấu hình Auth.js: Credentials provider, JWT callbacks
+│   │   │   ├── config.ts         # base config dùng chung (pages, authorized callback — không Credentials/bcrypt/DB)
+│   │   │   ├── index.ts          # config đầy đủ: Credentials provider, JWT callbacks, export handlers/auth/signIn/signOut
 │   │   │   └── password.ts       # hash/verify password bằng bcrypt
 │   │   ├── trpc/
 │   │   │   ├── init.ts           # initTRPC, context (đọc session → userId)
@@ -57,7 +58,7 @@ worker.ts ──────────────────>  server/servic
 ```
 
 - `server/services` là nghiệp vụ thuần: **không** import bất kỳ thứ gì thuộc React, Next.js request/response, hay BullMQ trực tiếp — chỉ nhận tham số (kể cả `userId` — luôn nhận từ tham số, không tự lấy session), trả dữ liệu, gọi `providers` và `db`. Nhờ vậy `app` (tRPC router) và `worker.ts` đều gọi lại được cùng một hàm mà không trùng logic.
-- `server/trpc/routers` chỉ làm việc "mỏng": validate input bằng Zod, lấy `userId` từ `ctx.session` (do `server/trpc/init.ts` gắn vào context qua Auth.js), gọi `services`, trả kết quả — không chứa logic nghiệp vụ.
+- `server/trpc/routers` chỉ làm việc "mỏng": validate input bằng Zod, lấy `userId` từ `ctx.userId` (do `server/trpc/init.ts` đọc session qua Auth.js rồi gắn vào context), gọi `services`, trả kết quả — không chứa logic nghiệp vụ. Route nào cần đăng nhập dùng `protectedProcedure` thay vì `publicProcedure`.
 - `server/auth` là ranh giới duy nhất xử lý password/JWT — `services` và các phần khác không tự hash password hay đọc token.
 - `providers/spy` là ranh giới duy nhất được phép gọi HTTP ra ngoài tới nhà cung cấp dữ liệu.
 - `features/*` chứa component UI đặc thù theo domain (sidebar lịch sử, bảng kết quả); `components/ui` chỉ chứa primitive tái dùng (Button, Table, Dialog... từ shadcn/ui).

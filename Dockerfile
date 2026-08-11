@@ -24,5 +24,5 @@ COPY --from=build /app/prisma.config.ts ./prisma.config.ts
 COPY --from=build /app/worker.ts ./worker.ts
 COPY --from=build /app/src ./src
 
-EXPOSE 3000
+EXPOSE 8010
 CMD ["npm", "start"]

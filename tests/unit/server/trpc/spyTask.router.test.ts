@@ -28,4 +28,9 @@ describe('spyTask router', () => {
 
     await expect(strangerCaller.spyTask.getDetail({ spyTaskId: task.id })).rejects.toThrow();
   });
+
+  it('throws UNAUTHORIZED when there is no userId in context', async () => {
+    const caller = createCaller({ userId: undefined });
+    await expect(caller.spyTask.list()).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
+  });
 });

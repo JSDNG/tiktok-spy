@@ -14,8 +14,10 @@ describe('env', () => {
     vi.stubEnv('APIFY_TOKEN', 'token');
     vi.stubEnv('SEED_USER_EMAIL', 'devdragon@gmail.com');
     vi.stubEnv('SEED_USER_PASSWORD', 'DevDragon2026');
+    vi.stubEnv('AUTH_SECRET', 'test-secret-at-least-32-chars-long');
     const { env } = await import('@/lib/env');
     expect(env.SPY_MAX_PRODUCTS).toBe(20);
     expect(env.APIFY_ACTOR_ID).toBe('devcake~tiktok-shop-data-scraper');
+    expect(env.AUTH_SESSION_MAX_AGE).toBe(604800);
   });
 });

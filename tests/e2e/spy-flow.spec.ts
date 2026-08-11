@@ -5,7 +5,7 @@ let worker: ChildProcess;
 
 test.beforeAll(async () => {
   worker = spawn('npx', ['tsx', 'worker.ts'], {
-    env: { ...process.env, USE_MOCK_SPY_PROVIDER: 'true' },
+    env: { ...process.env, USE_MOCK_SPY_PROVIDER: 'true', POLL_INITIAL_DELAY_MS: '1000' },
     stdio: 'pipe',
   });
   await new Promise<void>((resolve) => {
@@ -21,8 +21,18 @@ test.afterAll(() => {
 
 test('user spies a keyword and sees it appear in history and detail', async ({ page }) => {
   const keyword = `hoodie-e2e-${Date.now()}`;
+  const email = `spy-e2e-${Date.now()}@example.com`;
 
-  await page.goto('/');
+  await page.goto('/register');
+  await page.getByPlaceholder('Email').fill(email);
+  await page.getByPlaceholder('Mật khẩu').fill('Password123');
+  await page.getByRole('button', { name: 'Đăng ký' }).click();
+  await expect(page).toHaveURL(/\/login/);
+  await page.getByPlaceholder('Email').fill(email);
+  await page.getByPlaceholder('Mật khẩu').fill('Password123');
+  await page.getByRole('button', { name: 'Đăng nhập' }).click();
+  await expect(page).toHaveURL('/');
+
   await page.getByPlaceholder('Từ khoá').fill(keyword);
   await page.getByRole('button', { name: 'Spy' }).click();
 
