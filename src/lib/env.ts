@@ -13,6 +13,8 @@ const schema = z.object({
   POLL_TIMEOUT_MS: z.coerce.number().int().positive().default(180000),
   SEED_USER_EMAIL: z.string().email(),
   SEED_USER_PASSWORD: z.string().min(8),
+  AUTH_SECRET: z.string().min(1),
+  AUTH_SESSION_MAX_AGE: z.coerce.number().int().positive().default(604800),
 });
 
 export const env = schema.parse(process.env);
