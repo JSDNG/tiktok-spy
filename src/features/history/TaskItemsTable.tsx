@@ -31,11 +31,19 @@ const columns: ColumnDef<SpyTaskItemRow>[] = [
       <img
         src={row.original.imageUrl}
         alt={row.original.title}
-        className="h-12 w-12 rounded object-cover"
+        className="h-20 w-20 shrink-0 rounded-md object-cover"
       />
     ),
   },
-  { accessorKey: 'title', header: 'Tên sản phẩm' },
+  {
+    accessorKey: 'title',
+    header: 'Tên sản phẩm',
+    cell: ({ row }) => (
+      <span className="line-clamp-2 max-w-xs" title={row.original.title}>
+        {row.original.title}
+      </span>
+    ),
+  },
   {
     accessorKey: 'price',
     header: 'Giá',
@@ -66,33 +74,40 @@ export function TaskItemsTable({ items }: { items: SpyTaskItemRow[] }) {
         onChange={(event) => setGlobalFilter(event.target.value)}
         className="max-w-sm"
       />
-      <Table>
-        <TableHeader>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <TableHead
-                  key={header.id}
-                  onClick={header.column.getToggleSortingHandler()}
-                  className={header.column.getCanSort() ? 'cursor-pointer select-none' : ''}
-                >
-                  {flexRender(header.column.columnDef.header, header.getContext())}
-                  {{ asc: ' ↑', desc: ' ↓' }[header.column.getIsSorted() as string] ?? ''}
-                </TableHead>
-              ))}
-            </TableRow>
-          ))}
-        </TableHeader>
-        <TableBody>
-          {table.getRowModel().rows.map((row) => (
-            <TableRow key={row.id}>
-              {row.getVisibleCells().map((cell) => (
-                <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
-              ))}
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+      <div className="overflow-x-auto rounded-md border">
+        <Table>
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <TableHead
+                    key={header.id}
+                    onClick={header.column.getToggleSortingHandler()}
+                    className={header.column.getCanSort() ? 'cursor-pointer select-none whitespace-nowrap' : 'whitespace-nowrap'}
+                  >
+                    {flexRender(header.column.columnDef.header, header.getContext())}
+                    {{ asc: ' ↑', desc: ' ↓' }[header.column.getIsSorted() as string] ?? ''}
+                  </TableHead>
+                ))}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {table.getRowModel().rows.map((row) => (
+              <TableRow key={row.id}>
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell
+                    key={cell.id}
+                    className={cell.column.id === 'title' ? 'whitespace-normal' : undefined}
+                  >
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }
