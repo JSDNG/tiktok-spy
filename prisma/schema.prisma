@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum SpyTaskStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+  TIMEOUT
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  username     String?  @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  spyTasks SpyTask[]
+}
+
+model SpyTask {
+  id             String        @id @default(cuid())
+  userId         String
+  provider       String
+  providerTaskId String
+  status         SpyTaskStatus @default(PENDING)
+  params         Json
+  itemCount      Int           @default(0)
+  error          String?
+  createdAt      DateTime      @default(now())
+  startedAt      DateTime?
+  finishedAt     DateTime?
+
+  user  User                 @relation(fields: [userId], references: [id])
+  items SpyTaskItem[]
+  logs  ProviderRequestLog[]
+
+  @@unique([provider, providerTaskId])
+  @@index([userId, createdAt])
+}
+
+model SpyTaskItem {
+  id             String   @id @default(cuid())
+  spyTaskId      String
+  provider       String
+  externalId     String
+  title          String
+  imageUrl       String
+  productUrl     String
+  shopName       String?
+  category       String?
+  price          Int
+  originalPrice  Int?
+  currency       String
+  soldCount      Int?
+  rating         Float?
+  reviewCount    Int?
+  capturedAt     DateTime @default(now())
+
+  spyTask SpyTask @relation(fields: [spyTaskId], references: [id])
+
+  @@index([spyTaskId])
+  @@index([provider, externalId, capturedAt(sort: Desc)])
+}
+
+model ProviderRequestLog {
+  id           String   @id @default(cuid())
+  spyTaskId    String?
+  endpoint     String
+  httpStatus   Int
+  durationMs   Int
+  errorMessage String?
+  createdAt    DateTime @default(now())
+
+  spyTask SpyTask? @relation(fields: [spyTaskId], references: [id])
+
+  @@index([spyTaskId])
+}
