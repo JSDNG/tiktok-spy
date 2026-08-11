@@ -2,11 +2,7 @@ import { z } from 'zod';
 import { createTRPCRouter, publicProcedure, TRPCError } from '@/server/trpc/init';
 import { createSpyTask } from '@/server/services/spyTask';
 import { listSpyTasks, getSpyTaskDetail } from '@/server/services/spyTaskQuery';
-import { apifySpyProvider } from '@/providers/spy/apify.adapter';
-import { mockSpyProvider } from '@/providers/spy/mock.adapter';
-
-// Test/e2e chạy với mockSpyProvider để không phụ thuộc mạng/quota Apify thật.
-const spyProvider = process.env.NODE_ENV === 'test' ? mockSpyProvider : apifySpyProvider;
+import { spyProvider } from '@/providers/spy';
 
 export const spyTaskRouter = createTRPCRouter({
   create: publicProcedure

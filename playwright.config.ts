@@ -6,6 +6,7 @@ export default defineConfig({
     command: 'npm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
+    env: { USE_MOCK_SPY_PROVIDER: 'true', POLL_INITIAL_DELAY_MS: '1000' },
   },
   use: {
     baseURL: 'http://localhost:3000',

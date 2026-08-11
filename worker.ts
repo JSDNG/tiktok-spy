@@ -1,11 +1,11 @@
 import { Worker } from 'bullmq';
 import { redisConnection } from '@/server/queue/connection';
 import { processPollJob } from '@/server/queue/spyWorker';
-import { apifySpyProvider } from '@/providers/spy/apify.adapter';
+import { spyProvider } from '@/providers/spy';
 
 const worker = new Worker(
   'poll-spy-result',
-  (job) => processPollJob(job, { provider: apifySpyProvider }),
+  (job) => processPollJob(job, { provider: spyProvider }),
   { connection: redisConnection },
 );
 
