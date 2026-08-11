@@ -9,11 +9,24 @@ export function assertSpyTaskOwnership(
   }
 }
 
+function keywordOf(spyTask: { params: unknown }): string {
+  return (spyTask.params as { keyword: string }).keyword;
+}
+
 export async function listSpyTasks(params: { userId: string }) {
-  return db.spyTask.findMany({
+  const tasks = await db.spyTask.findMany({
     where: { userId: params.userId },
     orderBy: { createdAt: 'desc' },
   });
+
+  return tasks.map((task) => ({
+    id: task.id,
+    status: task.status,
+    itemCount: task.itemCount,
+    error: task.error,
+    createdAt: task.createdAt,
+    keyword: keywordOf(task),
+  }));
 }
 
 export async function getSpyTaskDetail(params: { userId: string; spyTaskId: string }) {
@@ -21,5 +34,16 @@ export async function getSpyTaskDetail(params: { userId: string; spyTaskId: stri
   assertSpyTaskOwnership(task, params.userId);
 
   const items = await db.spyTaskItem.findMany({ where: { spyTaskId: task.id } });
-  return { task, items };
+
+  return {
+    task: {
+      id: task.id,
+      status: task.status,
+      itemCount: task.itemCount,
+      error: task.error,
+      createdAt: task.createdAt,
+      keyword: keywordOf(task),
+    },
+    items,
+  };
 }

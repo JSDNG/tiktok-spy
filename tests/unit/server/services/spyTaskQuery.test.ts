@@ -26,13 +26,14 @@ describe('listSpyTasks', () => {
   it('returns only tasks belonging to the given user, newest first', async () => {
     const userA = await createTestUser();
     const userB = await createTestUser();
-    await createSpyTask({ userId: userA.id, keyword: 'a', provider: mockSpyProvider });
+    const taskA = await createSpyTask({ userId: userA.id, keyword: 'a', provider: mockSpyProvider });
     await createSpyTask({ userId: userB.id, keyword: 'b', provider: mockSpyProvider });
 
     const result = await listSpyTasks({ userId: userA.id });
 
     expect(result).toHaveLength(1);
-    expect(result[0].userId).toBe(userA.id);
+    expect(result[0].id).toBe(taskA.id);
+    expect(result[0].keyword).toBe('a');
   });
 });
 

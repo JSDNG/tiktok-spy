@@ -22,7 +22,13 @@ export async function createSpyTask(params: {
 
   await spyQueue.add('poll-spy-result', { spyTaskId: task.id }, { delay: env.POLL_INITIAL_DELAY_MS });
 
-  return task;
+  return {
+    id: task.id,
+    userId: task.userId,
+    status: task.status,
+    providerTaskId: task.providerTaskId,
+    keyword: params.keyword,
+  };
 }
 
 export async function persistResult(params: { spyTaskId: string; items: NormalizedSpyItem[] }) {
