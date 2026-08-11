@@ -39,6 +39,8 @@ services:
   redis:
     image: redis:7
     restart: unless-stopped
+    ports:
+      - '127.0.0.1:6381:6379'
     command: redis-server --appendonly yes
     volumes:
       - redis-data:/data
