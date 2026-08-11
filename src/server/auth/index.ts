@@ -7,8 +7,7 @@ import { env } from '@/lib/env';
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
-  secret: env.AUTH_SECRET,
-  trustHost: true, // sau nginx reverse proxy (deploy/nginx/) — tin header X-Forwarded-* thay vì tự đoán origin
+  secret: env.AUTH_SECRET, // trustHost đã kế thừa từ authConfig
   session: { strategy: 'jwt', maxAge: env.AUTH_SESSION_MAX_AGE },
   providers: [
     Credentials({
