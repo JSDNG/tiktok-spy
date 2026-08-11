@@ -1,3 +1,24 @@
 .env
 .env.local
 .env.*.local
+
+# Dependencies
+node_modules
+
+# Next.js
+.next
+out
+
+# Testing
+/test-results
+/playwright-report
+/blob-report
+/playwright/.cache
+/.playwright-mcp
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Claude Code local state
+.claude/
