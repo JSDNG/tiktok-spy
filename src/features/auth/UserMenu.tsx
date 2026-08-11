@@ -7,7 +7,7 @@ export function UserMenu({ label }: { label: string }) {
         'use server';
         await signOut({ redirectTo: '/login' });
       }}
-      className="flex items-center justify-between border-t p-3 text-sm"
+      className="flex items-center gap-3 text-sm"
     >
       <span className="truncate text-muted-foreground">{label}</span>
       <button type="submit" className="shrink-0 underline">
