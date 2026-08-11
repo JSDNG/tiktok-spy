@@ -2,7 +2,7 @@ import type { SpyProvider } from './types';
 
 export const mockSpyProvider: SpyProvider = {
   async startSpy() {
-    return { providerTaskId: `mock-${Date.now()}` };
+    return { providerTaskId: `mock-${crypto.randomUUID()}` };
   },
   async fetchResult() {
     return {
