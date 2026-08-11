@@ -17,6 +17,7 @@ export async function listSpyTasks(params: { userId: string }) {
   const tasks = await db.spyTask.findMany({
     where: { userId: params.userId },
     orderBy: { createdAt: 'desc' },
+    select: { id: true, status: true, itemCount: true, error: true, params: true },
   });
 
   return tasks.map((task) => ({
@@ -24,16 +25,29 @@ export async function listSpyTasks(params: { userId: string }) {
     status: task.status,
     itemCount: task.itemCount,
     error: task.error,
-    createdAt: task.createdAt,
     keyword: keywordOf(task),
   }));
 }
 
 export async function getSpyTaskDetail(params: { userId: string; spyTaskId: string }) {
-  const task = await db.spyTask.findUnique({ where: { id: params.spyTaskId } });
+  const task = await db.spyTask.findUnique({
+    where: { id: params.spyTaskId },
+    select: { id: true, userId: true, status: true, itemCount: true, error: true, params: true },
+  });
   assertSpyTaskOwnership(task, params.userId);
 
-  const items = await db.spyTaskItem.findMany({ where: { spyTaskId: task.id } });
+  const items = await db.spyTaskItem.findMany({
+    where: { spyTaskId: task.id },
+    select: {
+      id: true,
+      imageUrl: true,
+      title: true,
+      price: true,
+      currency: true,
+      soldCount: true,
+      rating: true,
+    },
+  });
 
   return {
     task: {
@@ -41,7 +55,6 @@ export async function getSpyTaskDetail(params: { userId: string; spyTaskId: stri
       status: task.status,
       itemCount: task.itemCount,
       error: task.error,
-      createdAt: task.createdAt,
       keyword: keywordOf(task),
     },
     items,
