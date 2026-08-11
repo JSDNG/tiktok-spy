@@ -8,7 +8,7 @@ export function TaskHistorySidebar() {
   const { data: tasks } = trpc.spyTask.list.useQuery(undefined, { refetchInterval: 2000 });
 
   return (
-    <nav className="flex h-full w-64 flex-col gap-1 border-r p-3">
+    <nav className="flex h-full flex-1 flex-col gap-1 overflow-y-auto p-3">
       <Link href="/" className="mb-2 rounded px-2 py-1.5 text-sm font-medium hover:bg-muted">
         + Spy mới
       </Link>
