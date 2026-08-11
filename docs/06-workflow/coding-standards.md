@@ -56,11 +56,12 @@ Khớp với pattern đã dùng trong `project-structure.md`:
 // tsconfig.json
 {
   "compilerOptions": {
-    "baseUrl": "src/",
-    "paths": { "@/*": ["*"] }
+    "paths": { "@/*": ["./src/*"] }
   }
 }
 ```
+
+*(TypeScript 6.0 loại bỏ `baseUrl` — `paths` phải tự chứa đường dẫn tương đối đầy đủ.)*
 
 ## Testing
 
