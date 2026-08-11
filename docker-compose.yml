@@ -4,9 +4,10 @@ services:
     command: npm start
     restart: unless-stopped
     ports:
-      - '127.0.0.1:8010:3000'
+      - '127.0.0.1:8010:8010'
     env_file: .env
     environment:
+      PORT: '8010'
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/tiktok_spy
       REDIS_URL: redis://redis:6379
     depends_on:
