@@ -4,7 +4,7 @@ services:
     command: npm start
     restart: unless-stopped
     ports:
-      - '3000:3000'
+      - '127.0.0.1:8010:3000'
     env_file: .env
     environment:
       DATABASE_URL: postgresql://postgres:password@postgres:5432/tiktok_spy
@@ -26,7 +26,7 @@ services:
       - redis
 
   postgres:
-    image: postgres:16
+    image: postgres:15
     restart: unless-stopped
     environment:
       POSTGRES_PASSWORD: password
