@@ -18,4 +18,4 @@ Giai đoạn hiện tại: **phân tích & thiết kế**. Chưa có source code
 
 **Thứ tự triển khai Giai đoạn 2 (đã chốt):** luồng chính trước (tạo `SpyTask` → job pipeline → sidebar lịch sử → chi tiết `SpyTaskItem`, dùng user mặc định seed sẵn), **auth (Auth.js) làm sau cùng** — xem [03-decisions/adr-0005-authjs-jwt-cho-xac-thuc.md](03-decisions/adr-0005-authjs-jwt-cho-xac-thuc.md) mục "Ghi chú triển khai".
 
-Spec chi tiết của 2 API bên ngoài (spy + get-result) **chưa được cấp** — xem [04-integration/external-spy-api.md](04-integration/external-spy-api.md) cho interface tạm và bảng ánh xạ trường cần điền khi có spec.
+Provider spy: **Apify** (actor `devcake~tiktok-shop-data-scraper`) — xem [04-integration/external-spy-api.md](04-integration/external-spy-api.md) cho spec đầy đủ 2 lệnh gọi (khởi tạo + lấy kết quả) và bảng ánh xạ trường.

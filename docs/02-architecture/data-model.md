@@ -68,8 +68,8 @@ Cùng một sản phẩm thật xuất hiện ở nhiều lần spy khác nhau s
 
 ## Quy ước
 
-- **Tiền tệ:** lưu dạng số nguyên ở đơn vị nhỏ nhất (cent, không dùng `float`). Provider trả `price`/`original_price` dạng thập phân đô la (ví dụ `6.99`) — adapter phải nhân `100` và làm tròn trước khi lưu. `currency` không lấy từ provider (không có field này trong response thật) mà lấy từ cấu hình hệ thống `SPY_DEFAULT_CURRENCY` (mặc định `"USD"`).
-- **`originalPrice` (nullable):** giá gốc trước giảm, có provider trả có provider không. Phần trăm giảm giá (`discount`) **không lưu trực tiếp** chuỗi provider trả về (ví dụ `"50%"`) — tính lại ở tầng hiển thị từ `price`/`originalPrice` để tránh phụ thuộc định dạng không nhất quán của provider.
+- **Tiền tệ:** lưu dạng số nguyên ở đơn vị nhỏ nhất (cent, không dùng `float`). Provider trả `price` dạng thập phân đô la (ví dụ `12.9`) — adapter phải nhân `100` và làm tròn trước khi lưu. `currency` lấy trực tiếp từ field `currency` của provider; cấu hình `SPY_DEFAULT_CURRENCY` (mặc định `"USD"`) chỉ dùng làm giá trị dự phòng khi provider không trả field này.
+- **`originalPrice` (nullable):** giá gốc trước giảm — nullable vì không phải provider nào cũng trả field này.
 - **Thời gian:** mọi `datetime` lưu UTC; quy đổi timezone chỉ thực hiện ở tầng hiển thị (UI). `capturedAt` mặc định bằng thời điểm insert (lúc `SpyTask` chuyển `SUCCEEDED`).
 - **`userId` bắt buộc trên `SpyTask`:** không nullable — mọi task thuộc về đúng một người dùng ngay từ đầu (đáp ứng NFR-06). `SpyTaskItem` không cần cột `userId` riêng — quyền truy cập luôn đi qua `SpyTask` (kiểm tra `spyTask.userId` trước khi cho xem `items` của nó), tránh trùng lặp logic phân quyền ở hai chỗ.
 - **Không có ràng buộc duy nhất trên `SpyTaskItem`:** mỗi dòng là một bản ghi độc lập theo từng lần spy — trùng `externalId` giữa nhiều dòng là **có chủ đích**, không phải lỗi dữ liệu.

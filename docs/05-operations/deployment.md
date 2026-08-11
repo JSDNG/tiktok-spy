@@ -17,12 +17,13 @@
 |---|---|---|
 | `DATABASE_URL` | Connection string PostgreSQL | Có |
 | `REDIS_URL` | Connection string Redis | Có |
-| `SPY_API_BASE_URL` | Base URL của provider | Có |
-| `SPY_API_KEY` | Khoá xác thực provider — chỉ dùng phía server | Có, giữ bí mật |
+| `APIFY_TOKEN` | Token xác thực Apify — chỉ dùng phía `worker` | Có, giữ bí mật |
+| `APIFY_ACTOR_ID` | Định danh actor Apify, ví dụ `devcake~tiktok-shop-data-scraper` | Có default |
 | `SPY_DEFAULT_CURRENCY` | Tiền tệ mặc định gán cho sản phẩm khi provider không trả field `currency` (ví dụ `"USD"`) | Có default |
-| `POLL_INITIAL_DELAY_MS` | Độ trễ trước lần poll đầu tiên | Có default |
-| `POLL_MAX_ATTEMPTS` | Số lần poll tối đa cho một task | Có default |
-| `POLL_TIMEOUT_MS` | Tổng thời gian tối đa chờ một task trước khi đánh dấu `TIMEOUT` | Có default |
+| `SPY_MAX_PRODUCTS` | Số sản phẩm tối đa lấy về mỗi lần spy (`maxProducts` gửi trong body `startSpy`), mặc định `20` | Có default |
+| `POLL_INITIAL_DELAY_MS` | Độ trễ trước lần poll đầu tiên, mặc định `20000` (20s) — actor cần thời gian khởi động container | Có default |
+| `POLL_INTERVAL_MS` | Khoảng cách cố định giữa các lần poll sau đó, mặc định `10000` (10s) | Có default |
+| `POLL_TIMEOUT_MS` | Tổng thời gian tối đa chờ một task trước khi đánh dấu `TIMEOUT`, mặc định `180000` (3 phút — gấp 3 lần timeout 60s cấu hình trong body `startSpy`, chừa dư cho overhead khởi động container) | Có default |
 | `AUTH_SECRET` | Khoá ký/giải mã JWT của Auth.js | Có, giữ bí mật — sinh bằng `openssl rand -base64 32` |
 | `AUTH_SESSION_MAX_AGE` | Thời hạn hiệu lực của JWT (giây), ví dụ `604800` (7 ngày) | Có default |
 

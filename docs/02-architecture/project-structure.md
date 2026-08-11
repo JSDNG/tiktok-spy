@@ -35,8 +35,8 @@ tiktok-spy/
 │   ├── providers/
 │   │   └── spy/
 │   │       ├── types.ts          # interface SpyProvider, NormalizedSpyItem, SpyResult
-│   │       ├── mock.adapter.ts   # adapter giả lập, dùng khi chưa có spec thật
-│   │       └── <provider>.adapter.ts  # thêm khi có spec API thật
+│   │       ├── apify.adapter.ts  # adapter thật, gọi Apify (xem docs/04-integration/external-spy-api.md)
+│   │       └── mock.adapter.ts   # adapter giả lập, dùng trong test (Vitest) để không phụ thuộc mạng
 │   ├── features/
 │   │   ├── auth/                 # LoginForm, RegisterForm (client components)
 │   │   └── history/               # TaskHistorySidebar, TaskItemsTable (client components)

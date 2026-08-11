@@ -1,6 +1,6 @@
 # Hợp đồng tích hợp: API Spy bên ngoài
 
-> **Trạng thái: đã có mẫu response cho `fetchResult` (phần sản phẩm), còn thiếu spec của `startSpy` request/response và cơ chế phân trang/lỗi.** Interface dưới đây là hợp đồng nội bộ đã chốt (xem [ADR-0004](../03-decisions/adr-0004-provider-adapter-layer.md)). Các mục còn `*(chờ spec)*` cần bạn cung cấp thêm khi có tài liệu đầy đủ từ nhà cung cấp.
+Provider: **Apify** — actor mặc định `devcake~tiktok-shop-data-scraper` (đọc từ `APIFY_ACTOR_ID`). Xác thực bằng token qua query param `?token=...`, đọc từ biến môi trường `APIFY_TOKEN` (xem [deployment.md](../05-operations/deployment.md)).
 
 ## Interface nội bộ (`src/providers/spy/types.ts`)
 
@@ -10,7 +10,7 @@ export interface SpyParams {
 }
 
 export interface NormalizedSpyItem {
-  externalId: string;     // ID sản phẩm phía provider (product_id) — lưu thẳng vào SpyTaskItem mỗi lần spy
+  externalId: string;
   title: string;
   imageUrl: string;
   productUrl: string;
@@ -18,7 +18,7 @@ export interface NormalizedSpyItem {
   category?: string;
   price: number;          // đơn vị nhỏ nhất (cent), số nguyên
   originalPrice?: number; // đơn vị nhỏ nhất (cent), số nguyên — giá trước giảm
-  currency: string;       // ISO 4217 — KHÔNG lấy từ provider này, xem ghi chú bên dưới
+  currency: string;       // ISO 4217
   soldCount?: number;
   rating?: number;
   reviewCount?: number;
@@ -37,63 +37,119 @@ export interface SpyProvider {
 }
 ```
 
-## Mẫu response thật (phần sản phẩm, do bạn cung cấp)
+## Adapter Apify (`apify.adapter.ts`)
 
-```json
+### `startSpy(params)`
+
+```
+POST https://api.apify.com/v2/actors/{APIFY_ACTOR_ID}/runs?token={APIFY_TOKEN}
+Content-Type: application/json
+
 {
-  "image_url": "https://p16-oec-general.ttcdn-us.com/tos-maliva-i-o3syd03w52-us/...webp",
-  "title": "Men's Fall/Winter Spider-Print Hooded Sweatshirt ...",
-  "price": 6.99,
-  "original_price": 13.98,
-  "discount": "50%",
-  "rating": 0,
-  "review_count": 0,
-  "sold_count": 86,
-  "seller_name": "TIKKFASHION",
-  "url": "https://shop.tiktok.com/us/pdp/1732534527327769383",
-  "product_id": "1732534527327769383"
+  "includeReviews": false,
+  "searchKeywords": ["<params.keyword>"],
+  "maxProducts": <SPY_MAX_PRODUCTS>,
+  "sortBySoldCount": "highest_first",
+  "maxRetries": 5,
+  "requestDelay": 0,
+  "timeout": 60
 }
 ```
 
-Đây là dạng dữ liệu **sau khi task đã `SUCCEEDED`** — chưa rõ nó nằm trực tiếp trong response của `fetchResult()` hay phải gọi thêm một bước khác để lấy danh sách item theo `taskId`. Cần xác nhận thêm cấu trúc bao ngoài (có field `status`, `task_id`, phân trang bao quanh mảng sản phẩm này không).
+`searchKeywords` điền động từ `params.keyword`, `maxProducts` đọc từ biến môi trường `SPY_MAX_PRODUCTS` (mặc định `20`) — hai trường duy nhất không cố định cứng trong code. Các trường còn lại (`includeReviews`, `sortBySoldCount`, `maxRetries`, `requestDelay`, `timeout`) giữ giá trị cố định trong adapter, không expose ra `SpyParams` hay biến môi trường.
+
+Response (`201`) là một Actor Run object; lấy `data.id` làm `providerTaskId`:
+
+```json
+{ "data": { "id": "HG7ML7M8z78YcAPEB", "status": "READY", "defaultDatasetId": "wmKPijuyDnPZAPRMk", "...": "..." } }
+```
+
+`providerTaskId` lưu vào `SpyTask.providerTaskId` chính là **run id** (`data.id`), không phải `defaultDatasetId` — lý do ở phần dưới.
+
+### `fetchResult(providerTaskId)`
+
+Thực hiện tối đa 2 lệnh gọi HTTP tới Apify bên trong hàm này — worker chỉ thấy một hàm `fetchResult` duy nhất, không biết chi tiết bên trong:
+
+**Bước 1 — kiểm tra trạng thái run:**
+
+```
+GET https://api.apify.com/v2/actor-runs/{providerTaskId}?token={APIFY_TOKEN}
+```
+
+Đọc `data.status`:
+
+| `status` của Apify | Map sang `SpyResult.status` |
+|---|---|
+| `READY`, `RUNNING` | `RUNNING` |
+| `SUCCEEDED` | tiếp Bước 2 |
+| `FAILED`, `ABORTED`, `TIMED-OUT` | `FAILED` (dùng `data.statusMessage` làm `errorMessage`) |
+| `TIMING-OUT`, `ABORTING` | `RUNNING` (đang trong quá trình chuyển sang trạng thái kết thúc) |
+
+**Bước 2 — chỉ gọi khi `status = SUCCEEDED`, lấy dữ liệu:**
+
+```
+GET https://api.apify.com/v2/datasets/{data.defaultDatasetId}/items?token={APIFY_TOKEN}
+```
+
+`defaultDatasetId` lấy từ chính response Bước 1 — không cần lưu riêng trong DB. Response là mảng object phẳng, mỗi phần tử một sản phẩm — chuẩn hoá từng phần tử thành `NormalizedSpyItem` rồi trả `{ status: 'SUCCEEDED', items }`.
+
+**Vì sao không gọi thẳng `GET /datasets/{id}/items` mà bỏ qua bước kiểm tra status:** dataset được actor đẩy dữ liệu vào **dần dần trong lúc chạy**, không đợi xong mới có. Gọi thẳng dataset items có thể đọc trúng lúc actor mới scrape được vài sản phẩm (chưa xong) hoặc đang giữa chừng khi actor gặp lỗi — dẫn tới lưu nhầm dữ liệu thiếu là kết quả cuối cùng. Bước kiểm tra `status` đảm bảo chỉ đọc dataset khi actor đã thật sự `SUCCEEDED`.
+
+## Mẫu response thật của `GET /datasets/{id}/items` (một phần tử)
+
+```json
+{
+  "product_id": "1732510032571502796",
+  "title": "4-Pack Men Autumn Winter Quarter Zip Hooded Sweatshirts ...",
+  "url": "https://shop.tiktok.com/us/pdp/1732510032571502796",
+  "price": 12.9,
+  "price_formatted": "12.90",
+  "currency": "USD",
+  "rating": 0,
+  "review_count": 0,
+  "seller_id": "7494516858865091788",
+  "seller_name": "XGBY",
+  "image_url": "https://p16-oec-general-useast5.ttcdn-us.com/...webp",
+  "sold_count": 2846,
+  "is_sold_out": true,
+  "creator_count": 0,
+  "has_creator_data": false,
+  "total_creator_videos": 0,
+  "reviews_fetched": 0,
+  "reviews_accessible": false,
+  "scraped_at": "2026-08-11T01:40:09.701118",
+  "source": "product_page"
+}
+```
 
 ## Bảng ánh xạ trường
 
 | Trường nội bộ | Field của provider | Ghi chú |
 |---|---|---|
-| `NormalizedSpyItem.externalId` | `product_id` | Lưu thẳng vào `SpyTaskItem` mỗi lần spy — không dùng làm khoá upsert (hệ thống không upsert) |
+| `NormalizedSpyItem.externalId` | `product_id` | |
 | `NormalizedSpyItem.title` | `title` | |
 | `NormalizedSpyItem.imageUrl` | `image_url` | |
 | `NormalizedSpyItem.productUrl` | `url` | |
 | `NormalizedSpyItem.shopName` | `seller_name` | |
-| `NormalizedSpyItem.category` | — | Provider không trả field này trong mẫu đã có; để `undefined` |
-| `NormalizedSpyItem.price` | `price` | **Chuyển đổi bắt buộc:** provider trả số thập phân đô la (`6.99`) → adapter nhân `100`, làm tròn (`Math.round`) thành cent (`699`) |
-| `NormalizedSpyItem.originalPrice` | `original_price` | Cùng cách chuyển đổi như `price` (`13.98 → 1398`) |
-| `NormalizedSpyItem.currency` | — | Provider không trả field này → adapter gán cứng từ `SPY_DEFAULT_CURRENCY` (mặc định `"USD"`), không đọc từ payload |
+| `NormalizedSpyItem.category` | — | Provider không trả field này; để `undefined` |
+| `NormalizedSpyItem.price` | `price` | **Chuyển đổi bắt buộc:** provider trả số thập phân đô la (`12.9`) → adapter nhân `100`, làm tròn (`Math.round`) thành cent (`1290`). Bỏ qua `price_formatted` (chuỗi hiển thị, không dùng). |
+| `NormalizedSpyItem.originalPrice` | — | Provider không trả field này trong response thực tế; luôn `undefined` với provider hiện tại |
+| `NormalizedSpyItem.currency` | `currency` | Lấy trực tiếp từ provider (`"USD"`); dùng `SPY_DEFAULT_CURRENCY` chỉ khi field này thiếu/rỗng |
 | `NormalizedSpyItem.rating` | `rating` | |
 | `NormalizedSpyItem.reviewCount` | `review_count` | |
 | `NormalizedSpyItem.soldCount` | `sold_count` | |
-| `discount` (field `"50%"` của provider) | *(không map)* | Không lưu — tính lại `% giảm` ở UI từ `price`/`originalPrice` khi cả hai đều có |
-| `SpyParams.keyword` | *(chờ spec)* | |
-| `startSpy()` request | *(chờ spec)* | Method, endpoint, auth header |
-| `startSpy()` response → `providerTaskId` | *(chờ spec)* | |
-| `fetchResult()` request | *(chờ spec)* | Endpoint, tần suất tối đa được phép gọi |
-| `fetchResult()` response → `status` | *(chờ spec)* | Provider dùng mã trạng thái nào cho "đang xử lý" / "xong" / "lỗi"? Response mẫu ở trên chỉ thấy mảng sản phẩm, chưa thấy field trạng thái bao ngoài |
-| Phân trang | *(chờ spec)* | Một task nhiều sản phẩm — lấy hết 1 lần hay phải gọi nhiều trang? |
+| `seller_id` | *(không map)* | Có trong response nhưng không dùng ở MVP — đã có `seller_name` |
+| `price_formatted`, `is_sold_out`, `creator_count`, `has_creator_data`, `total_creator_videos`, `reviews_fetched`, `reviews_accessible`, `scraped_at`, `source` | *(không map)* | Ngoài phạm vi MVP |
 
-## Câu hỏi cần làm rõ với nhà cung cấp
+## Giả định đã chốt
 
-1. **Xác thực:** API key qua header hay query param? Có cần ký request không?
-2. **Giới hạn tần suất:** rate limit của cả `startSpy` và `fetchResult` là bao nhiêu req/phút?
-3. **Thời gian xử lý:** trung bình/tối đa provider mất bao lâu để xử lý xong một task? (quyết định `delay` khởi tạo và `POLL_TIMEOUT_MS`)
-4. **Phân trang:** nếu một task trả về nhiều sản phẩm, có phân trang không? Lấy hết trong một lần gọi `fetchResult` hay phải gọi nhiều lần?
-5. **Mã lỗi:** danh sách mã lỗi có thể trả về, ý nghĩa của từng mã.
-6. **Hết hạn `taskId`:** `providerTaskId` có hết hạn sau bao lâu nếu không poll kịp?
-7. **Cấu trúc response bao ngoài:** mẫu đã có chỉ là mảng sản phẩm — field `status`/`task_id` (nếu có) nằm ở đâu trong response thật của `fetchResult`?
-8. **`sold_count` là luỹ kế hay theo khoảng thời gian?** Ảnh hưởng tới cách diễn giải số liệu này trên UI.
-9. **Có phải mọi sản phẩm đều là USD không**, hay có shop bán ở khu vực khác trả tiền tệ khác? (hiện đang mặc định `USD` cho toàn hệ thống qua `SPY_DEFAULT_CURRENCY`)
+| Giả định | Quyết định |
+|---|---|
+| `sold_count` là luỹ kế hay theo khoảng thời gian? | Coi là số luỹ kế toàn thời gian — hiển thị nguyên giá trị provider trả về, không cộng dồn hay quy đổi thêm. Đây là cách diễn giải để hiển thị, không phải tham số cấu hình. |
+| Sản phẩm có luôn là USD không? | Có — hệ thống chỉ hỗ trợ USD ở giai đoạn này. `currency` vẫn lấy từ field provider (không hardcode), `SPY_DEFAULT_CURRENCY` (env, mặc định `USD`) chỉ là fallback khi thiếu field. |
+| Giới hạn số sản phẩm mỗi lần spy | Cấu hình qua `SPY_MAX_PRODUCTS` (env, mặc định `20`), không phân trang lấy thêm — đạt tới giới hạn là dừng. |
 
 ## Bảo mật
 
-- `SPY_API_KEY` chỉ đọc từ biến môi trường phía server (`worker` và/hoặc `app` tuỳ nơi gọi `startSpy`), không bao giờ truyền xuống client — đáp ứng NFR-05.
-- Mọi lời gọi HTTP tới provider được ghi vào `ProviderRequestLog` (endpoint, mã trạng thái, thời gian phản hồi) để gỡ lỗi mà không cần log payload nhạy cảm.
+- `APIFY_TOKEN` chỉ đọc từ biến môi trường phía server (`worker`), không bao giờ truyền xuống client — đáp ứng NFR-05.
+- Mọi lời gọi HTTP tới Apify được ghi vào `ProviderRequestLog` (endpoint, mã trạng thái, thời gian phản hồi) để gỡ lỗi mà không cần log payload nhạy cảm.
