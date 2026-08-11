@@ -11,6 +11,7 @@ Công cụ theo dõi sản phẩm TikTok Shop: gọi API của nhà cung cấp b
 3. **[03-decisions](03-decisions/)** — Các ADR ghi lại lý do đằng sau từng quyết định kiến trúc.
 4. **[04-integration](04-integration/)** — Hợp đồng tích hợp với API bên ngoài (spy + lấy kết quả).
 5. **[05-operations](05-operations/)** — Triển khai Docker, biến môi trường, vận hành.
+6. **[06-workflow](06-workflow/)** — Quy tắc đặt tên nhánh/commit, quy tắc code — đọc trước khi bắt đầu code Giai đoạn 2.
 
 ## Trạng thái dự án
 
