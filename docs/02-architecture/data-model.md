@@ -74,6 +74,7 @@ Cùng một sản phẩm thật xuất hiện ở nhiều lần spy khác nhau s
 - **`userId` bắt buộc trên `SpyTask`:** không nullable — mọi task thuộc về đúng một người dùng ngay từ đầu (đáp ứng NFR-06). `SpyTaskItem` không cần cột `userId` riêng — quyền truy cập luôn đi qua `SpyTask` (kiểm tra `spyTask.userId` trước khi cho xem `items` của nó), tránh trùng lặp logic phân quyền ở hai chỗ.
 - **Không có ràng buộc duy nhất trên `SpyTaskItem`:** mỗi dòng là một bản ghi độc lập theo từng lần spy — trùng `externalId` giữa nhiều dòng là **có chủ đích**, không phải lỗi dữ liệu.
 - **Idempotency:** worker kiểm tra `SpyTask.status` trước khi xử lý — nếu đã ở trạng thái kết thúc (`SUCCEEDED`/`FAILED`/`TIMEOUT`) thì bỏ qua, không insert lại `SpyTaskItem` (job chạy lại do lỗi/restart không tạo dòng trùng).
+- **Không có chính sách xoá dữ liệu:** `SpyTaskItem` chỉ tăng, không có job dọn dẹp — dữ liệu tích luỹ vô thời hạn ở MVP. Khi cần, thêm chính sách xoá theo thời gian (ví dụ 1-3 tháng) chỉ cần một job định kỳ xoá theo `capturedAt`, không ảnh hưởng schema hiện tại.
 
 ## Bản nháp `schema.prisma`
 

@@ -42,7 +42,7 @@ Auth vẫn phải đúng kiến trúc và phân quyền rõ ràng như trên, nh
 
 Điều này không mâu thuẫn với thiết kế vì `server/services` tách khỏi session ngay từ đầu (xem [project-structure.md](../02-architecture/project-structure.md)) — mọi hàm service nhận `userId` như **tham số**, không tự đọc session. Cách thực hiện:
 
-1. **Lúc build luồng chính:** seed sẵn một bản ghi `User` mặc định trong DB (Prisma seed script). `tRPC context` tạm thời gán cứng `userId` của user này thay vì đọc JWT. Toàn bộ `services`, job pipeline, UI sidebar lịch sử/chi tiết phát triển và test đầy đủ với `userId` cố định này.
+1. **Lúc build luồng chính:** seed sẵn một bản ghi `User` mặc định trong DB (Prisma seed script), email/password đọc từ `SEED_USER_EMAIL`/`SEED_USER_PASSWORD` (xem `.env.example`) — password vẫn hash bằng bcrypt trước khi lưu như user thật, đúng NFR-08. `tRPC context` tạm thời gán cứng `userId` của user này thay vì đọc JWT. Toàn bộ `services`, job pipeline, UI sidebar lịch sử/chi tiết phát triển và test đầy đủ với `userId` cố định này.
 2. **Bước cuối cùng:** cắm Auth.js — chỉ sửa đúng một chỗ (`server/trpc/init.ts`: context lấy `userId` từ session JWT thay vì hằng số cố định), thêm route/trang login/register và `middleware.ts` chặn truy cập khi chưa đăng nhập. Không đụng tới `services`, `providers`, `queue`, hay UI đã có.
 
 Nhờ vậy schema (`userId` bắt buộc trên `SpyTask`) đúng ngay từ đầu, không phải migrate lại khi thêm auth sau.

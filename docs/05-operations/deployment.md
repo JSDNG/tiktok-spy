@@ -5,7 +5,7 @@
 | Service | Vai trò | Ghi chú |
 |---|---|---|
 | `app` | Next.js — UI + tRPC | Cổng public duy nhất (reverse proxy vào đây) |
-| `worker` | Node process chạy BullMQ worker | Không expose port, chỉ nối Redis + Postgres |
+| `worker` | Node process chạy BullMQ worker | Không expose port, chỉ nối Redis + Postgres. Concurrency mặc định BullMQ (`1`) — xử lý 1 `SpyTask` tại một thời điểm, xem [job-pipeline.md](../02-architecture/job-pipeline.md) |
 | `postgres` | PostgreSQL 16 | Volume riêng để dữ liệu sống sót qua rebuild |
 | `redis` | Redis 7 | Volume riêng (AOF) để job không mất khi restart |
 
@@ -26,6 +26,8 @@
 | `POLL_TIMEOUT_MS` | Tổng thời gian tối đa chờ một task trước khi đánh dấu `TIMEOUT`, mặc định `180000` (3 phút — gấp 3 lần timeout 60s cấu hình trong body `startSpy`, chừa dư cho overhead khởi động container) | Có default |
 | `AUTH_SECRET` | Khoá ký/giải mã JWT của Auth.js | Có, giữ bí mật — sinh bằng `openssl rand -base64 32` |
 | `AUTH_SESSION_MAX_AGE` | Thời hạn hiệu lực của JWT (giây), ví dụ `604800` (7 ngày) | Có default |
+| `SEED_USER_EMAIL` | Email của `User` seed sẵn — dùng làm `userId` cố định trước khi Auth.js được cắm vào (xem [ADR-0005](../03-decisions/adr-0005-authjs-jwt-cho-xac-thuc.md)) | Có default |
+| `SEED_USER_PASSWORD` | Password của user seed — vẫn hash bằng bcrypt khi lưu, đúng NFR-08 | Có default |
 
 Validate toàn bộ bằng Zod trong `src/lib/env.ts` — app/worker crash ngay khi khởi động nếu thiếu biến bắt buộc, thay vì lỗi ngầm lúc runtime.
 

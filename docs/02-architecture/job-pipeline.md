@@ -30,7 +30,7 @@ sequenceDiagram
             P-->>W: danh sách sản phẩm chuẩn hoá
             W->>Svc: persistResult(spyTaskId, items)
             Svc->>Svc: transaction: insert SpyTaskItem[] (mỗi item 1 dòng) + SpyTask=SUCCEEDED
-        else lỗi mạng/5xx
+        else lỗi mạng/5xx/429
             P-->>W: lỗi
             W->>W: retry theo attempts + backoff (BullMQ)
         end
@@ -49,7 +49,7 @@ sequenceDiagram
 3. **Worker poll:** worker dequeue job, gọi `provider.fetchResult(providerTaskId)` — với adapter Apify, một lệnh gọi này có thể thực hiện tới 2 request HTTP bên trong (kiểm tra trạng thái run, rồi mới lấy dữ liệu nếu đã xong; xem [external-spy-api.md](../04-integration/external-spy-api.md)), nhưng worker chỉ thấy một kết quả `SpyResult` duy nhất:
    - **Chưa xong:** gọi `job.moveToDelayed(Date.now() + POLL_INTERVAL_MS, token)` rồi `throw new DelayedError()` để nhả lock và lên lịch lại — theo đúng pattern khuyến nghị của BullMQ cho "process step jobs". Dùng **khoảng cách cố định** (`POLL_INTERVAL_MS`) giữa các lần poll, không tăng dần — vì actor có giới hạn thời gian chạy đã biết trước (xem bảng tham số bên dưới), không cần dè dặt kiểu backoff luỹ thừa như khi xử lý lỗi.
    - **Xong:** adapter provider chuẩn hoá từng item thành `NormalizedSpyItem` — chuyển `price` từ đô la thập phân sang cent số nguyên, lấy `currency` trực tiếp từ provider (fallback `SPY_DEFAULT_CURRENCY` nếu thiếu) — rồi gọi `persistResult` trong **một Prisma transaction**: `createMany` các dòng `SpyTaskItem` (mỗi sản phẩm tìm được là một dòng mới, gắn `spyTaskId` — không upsert, không kiểm tra trùng với lần spy trước). Đồng thời cập nhật `SpyTask.status = SUCCEEDED` và `itemCount`.
-   - **Lỗi mạng/5xx khi gọi Apify:** khác với case "chưa xong" ở trên — đây là lỗi giao tiếp, không phải trạng thái hợp lệ. Để BullMQ retry tự nhiên theo cấu hình cố định trên queue (`attempts: 3`, `backoff: { type: 'exponential', delay: 2000 }`) — không đọc từ biến môi trường, vì đây là hành vi kỹ thuật nội bộ của queue, không phụ thuộc provider.
+   - **Lỗi mạng/5xx/429 khi gọi Apify:** khác với case "chưa xong" ở trên — đây là lỗi giao tiếp, không phải trạng thái hợp lệ. Để BullMQ retry tự nhiên theo cấu hình cố định trên queue (`attempts: 3`, `backoff: { type: 'exponential', delay: 2000 }`) — không đọc từ biến môi trường, vì đây là hành vi kỹ thuật nội bộ của queue, không phụ thuộc provider. Rate limit thật của Apify (xem [external-spy-api.md](../04-integration/external-spy-api.md)) cao hơn nhiều so với tần suất gọi thực tế của hệ thống nên `429` gần như không xảy ra — retry này chỉ để phòng hờ.
    - **Vượt tổng thời gian cho phép** (so `Date.now() - spyTask.createdAt` với `POLL_TIMEOUT_MS`): cập nhật `SpyTask.status = TIMEOUT`, ghi `error`, không tiếp tục poll.
 
 4. **UI theo dõi:** trang task dùng tRPC query `spyTask.getStatus(id)` với `refetchInterval` (ví dụ 2s) khi `status` còn `PENDING`/`RUNNING`, tự dừng poll khi vào trạng thái kết thúc. Chọn cách này thay vì WebSocket vì đơn giản hơn nhiều mà vẫn đủ đáp ứng ở quy mô một người dùng.
@@ -65,6 +65,10 @@ Actor Apify được cấu hình `timeout: 60` (giây) trong body `startSpy` —
 | `POLL_TIMEOUT_MS` | `180000` (3 phút) | Tổng thời gian tối đa chờ một task — gấp 3 lần timeout 60s của actor, chừa dư cho overhead khởi động container và độ trễ mạng. Quá mốc này, task chuyển `TIMEOUT`. |
 
 Với các giá trị mặc định trên, một task có tối đa `(180000 − 20000) / 10000 = 16` lần poll trước khi hết hạn.
+
+## Concurrency
+
+Worker dùng **concurrency mặc định của BullMQ (`1`)** — xử lý một job `poll-spy-result` tại một thời điểm, không cấu hình `concurrency` tuỳ chỉnh. Nhiều `SpyTask` cùng `PENDING`/`RUNNING` vẫn xếp hàng bình thường trong Redis, chỉ là worker xử lý tuần tự thay vì song song. Ở quy mô hiện tại (kích hoạt thủ công, ít người dùng) không ảnh hưởng trải nghiệm; tăng `concurrency` là một tham số cấu hình đơn giản nếu cần sau này.
 
 ## Idempotency
 

@@ -42,6 +42,7 @@ Các mục sau **không** nằm trong giai đoạn 1, ghi rõ để tránh over-
 - Xuất dữ liệu (Excel, CSV, PDF).
 - Cache/CDN cho ảnh sản phẩm — dùng thẳng `imageUrl` từ provider.
 - Rate limiting/quota theo người dùng.
+- Xoá/dọn dẹp `SpyTaskItem` cũ theo thời gian (ví dụ tự động xoá sau 1-3 tháng) — MVP giữ toàn bộ lịch sử vô thời hạn, không có job dọn dẹp.
 
 ## Truy vết yêu cầu → kiến trúc
 

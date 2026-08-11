@@ -141,13 +141,25 @@ GET https://api.apify.com/v2/datasets/{data.defaultDatasetId}/items?token={APIFY
 | `seller_id` | *(không map)* | Có trong response nhưng không dùng ở MVP — đã có `seller_name` |
 | `price_formatted`, `is_sold_out`, `creator_count`, `has_creator_data`, `total_creator_videos`, `reviews_fetched`, `reviews_accessible`, `scraped_at`, `source` | *(không map)* | Ngoài phạm vi MVP |
 
-## Giả định đã chốt
+## Quyết định thiết kế
 
-| Giả định | Quyết định |
+| Vấn đề | Quyết định |
 |---|---|
-| `sold_count` là luỹ kế hay theo khoảng thời gian? | Coi là số luỹ kế toàn thời gian — hiển thị nguyên giá trị provider trả về, không cộng dồn hay quy đổi thêm. Đây là cách diễn giải để hiển thị, không phải tham số cấu hình. |
+| `sold_count` là luỹ kế hay theo khoảng thời gian? | Không diễn giải hay quy đổi — lấy nguyên giá trị `sold_count` provider trả về, hiển thị thẳng lên UI. Ý nghĩa con số (luỹ kế toàn thời gian hay theo mốc nào) do provider quyết định, hệ thống không tính toán lại. |
 | Sản phẩm có luôn là USD không? | Có — hệ thống chỉ hỗ trợ USD ở giai đoạn này. `currency` vẫn lấy từ field provider (không hardcode), `SPY_DEFAULT_CURRENCY` (env, mặc định `USD`) chỉ là fallback khi thiếu field. |
 | Giới hạn số sản phẩm mỗi lần spy | Cấu hình qua `SPY_MAX_PRODUCTS` (env, mặc định `20`), không phân trang lấy thêm — đạt tới giới hạn là dừng. |
+
+## Rate limit
+
+Theo tài liệu chính thức của Apify:
+
+| Loại giới hạn | Giá trị |
+|---|---|
+| Toàn cục (theo token) | 250.000 request/phút |
+| Theo resource, mặc định | 60 request/giây/resource |
+| Theo resource — chạy actor, push dataset item | 400 request/giây/resource |
+
+Với `POLL_INTERVAL_MS = 10000` và worker concurrency mặc định (`1`, xem [job-pipeline.md](../02-architecture/job-pipeline.md)), hệ thống gửi khoảng **0.1 request/giây** — thấp hơn giới hạn hàng trăm đến hàng nghìn lần. Không cần thêm cơ chế giới hạn tần suất phía mình; lỗi `429` (nếu có) được xử lý chung với lỗi mạng/5xx qua retry/backoff của BullMQ.
 
 ## Bảo mật
 
