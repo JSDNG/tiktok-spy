@@ -30,9 +30,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     ...authConfig.callbacks,
     jwt({ token, user }) {
-      if (user) {
-        // authorize() ở trên luôn trả id — DefaultUser.id chỉ optional vì phải tương thích các adapter khác
-        token.userId = user.id!;
+      // authorize() ở trên luôn trả id — DefaultUser.id chỉ optional vì phải tương thích các adapter khác
+      if (user?.id) {
+        token.userId = user.id;
         token.role = user.role;
       }
       return token;
