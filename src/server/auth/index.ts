@@ -23,18 +23,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const valid = await verifyPassword(password, user.passwordHash);
         if (!valid) return null;
 
-        return { id: user.id, email: user.email, name: user.username ?? user.email };
+        return { id: user.id, email: user.email, name: user.username ?? user.email, role: user.role };
       },
     }),
   ],
   callbacks: {
     ...authConfig.callbacks,
     jwt({ token, user }) {
-      if (user) token.userId = user.id;
+      if (user) {
+        // authorize() ở trên luôn trả id — DefaultUser.id chỉ optional vì phải tương thích các adapter khác
+        token.userId = user.id!;
+        token.role = user.role;
+      }
       return token;
     },
     session({ session, token }) {
-      if (session.user) session.user.id = token.userId as string;
+      if (session.user) {
+        session.user.id = token.userId;
+        session.user.role = token.role;
+      }
       return session;
     },
   },

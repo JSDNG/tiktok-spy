@@ -14,11 +14,17 @@ enum SpyTaskStatus {
   TIMEOUT
 }
 
+enum Role {
+  USER
+  ADMIN
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
   username     String?  @unique
   passwordHash String
+  role         Role     @default(USER)
   createdAt    DateTime @default(now())
 
   spyTasks SpyTask[]
@@ -30,6 +36,7 @@ model SpyTask {
   provider       String
   providerTaskId String
   status         SpyTaskStatus @default(PENDING)
+  keyword        String
   params         Json
   itemCount      Int           @default(0)
   error          String?
@@ -43,6 +50,7 @@ model SpyTask {
 
   @@unique([provider, providerTaskId])
   @@index([userId, createdAt])
+  @@index([keyword])
 }
 
 model SpyTaskItem {
