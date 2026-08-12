@@ -13,6 +13,7 @@ erDiagram
         string email "unique"
         string username "unique, nullable"
         string passwordHash
+        string role "USER | ADMIN, mặc định USER"
         datetime createdAt
     }
 
@@ -22,6 +23,7 @@ erDiagram
         string provider
         string providerTaskId
         string status
+        string keyword "denormalize từ params, có index"
         json params
         int itemCount
         string error
@@ -75,6 +77,8 @@ Cùng một sản phẩm thật xuất hiện ở nhiều lần spy khác nhau s
 - **Không có ràng buộc duy nhất trên `SpyTaskItem`:** mỗi dòng là một bản ghi độc lập theo từng lần spy — trùng `externalId` giữa nhiều dòng là **có chủ đích**, không phải lỗi dữ liệu.
 - **Idempotency:** worker kiểm tra `SpyTask.status` trước khi xử lý — nếu đã ở trạng thái kết thúc (`SUCCEEDED`/`FAILED`/`TIMEOUT`) thì bỏ qua, không insert lại `SpyTaskItem` (job chạy lại do lỗi/restart không tạo dòng trùng).
 - **Không có chính sách xoá dữ liệu:** `SpyTaskItem` chỉ tăng, không có job dọn dẹp — dữ liệu tích luỹ vô thời hạn ở MVP. Khi cần, thêm chính sách xoá theo thời gian (ví dụ 1-3 tháng) chỉ cần một job định kỳ xoá theo `capturedAt`, không ảnh hưởng schema hiện tại.
+- **`SpyTask.keyword` denormalize từ `params`:** `params` (JSON) vẫn là nguồn dữ liệu gốc cho `startSpy`/hiển thị, nhưng `keyword` được tách thành cột `String` riêng + `@@index([keyword])` để các query thống kê admin (top từ khoá, group theo từ khoá) dùng `groupBy` type-safe qua Prisma Client thay vì raw SQL trên JSON path (`params->>'keyword'`). `createSpyTask` ghi đồng thời cả hai; dữ liệu cũ được backfill một lần trong migration tạo cột.
+- **`User.role`:** enum `Role { USER ADMIN }`, mặc định `USER`. Đăng ký qua UI (`registerUser`) không nhận input `role` từ client — luôn dùng default ở DB. Tài khoản `ADMIN` đầu tiên do `prisma/seed.ts` gán (xem `requirements.md` NFR-11).
 
 ## Bản nháp `schema.prisma`
 
@@ -98,11 +102,17 @@ enum SpyTaskStatus {
   TIMEOUT
 }
 
+enum Role {
+  USER
+  ADMIN
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
   username     String?  @unique
   passwordHash String
+  role         Role     @default(USER)
   createdAt    DateTime @default(now())
 
   spyTasks SpyTask[]
@@ -114,6 +124,7 @@ model SpyTask {
   provider       String
   providerTaskId String
   status         SpyTaskStatus @default(PENDING)
+  keyword        String
   params         Json
   itemCount      Int           @default(0)
   error          String?
@@ -127,6 +138,7 @@ model SpyTask {
 
   @@unique([provider, providerTaskId])
   @@index([userId, createdAt])
+  @@index([keyword])
 }
 
 model SpyTaskItem {
