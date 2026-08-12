@@ -16,6 +16,7 @@ export async function createSpyTask(params: {
       provider: 'apify',
       providerTaskId,
       status: 'PENDING',
+      keyword: params.keyword,
       params: { keyword: params.keyword },
     },
   });
