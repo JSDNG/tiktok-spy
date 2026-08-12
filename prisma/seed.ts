@@ -10,8 +10,8 @@ async function main() {
   const passwordHash = await bcrypt.hash(env.SEED_USER_PASSWORD, 10);
   await db.user.upsert({
     where: { email: env.SEED_USER_EMAIL },
-    update: {},
-    create: { email: env.SEED_USER_EMAIL, passwordHash },
+    update: { role: 'ADMIN' },
+    create: { email: env.SEED_USER_EMAIL, passwordHash, role: 'ADMIN' },
   });
 }
 

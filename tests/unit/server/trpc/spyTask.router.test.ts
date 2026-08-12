@@ -9,7 +9,7 @@ async function createTestUser() {
 describe('spyTask router', () => {
   it('create returns a PENDING task and list shows it afterwards', async () => {
     const user = await createTestUser();
-    const caller = createCaller({ userId: user.id });
+    const caller = createCaller({ userId: user.id, role: 'USER' });
 
     const created = await caller.spyTask.create({ keyword: 'hoodie' });
     expect(created.status).toBe('PENDING');
@@ -21,8 +21,8 @@ describe('spyTask router', () => {
   it('getDetail throws for another user\'s task', async () => {
     const owner = await createTestUser();
     const stranger = await createTestUser();
-    const ownerCaller = createCaller({ userId: owner.id });
-    const strangerCaller = createCaller({ userId: stranger.id });
+    const ownerCaller = createCaller({ userId: owner.id, role: 'USER' });
+    const strangerCaller = createCaller({ userId: stranger.id, role: 'USER' });
 
     const task = await ownerCaller.spyTask.create({ keyword: 'hoodie' });
 
@@ -30,7 +30,7 @@ describe('spyTask router', () => {
   });
 
   it('throws UNAUTHORIZED when there is no userId in context', async () => {
-    const caller = createCaller({ userId: undefined });
+    const caller = createCaller({ userId: undefined, role: undefined });
     await expect(caller.spyTask.list()).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
   });
 });

@@ -7,7 +7,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <div className="flex h-screen flex-col">
-      <Header userLabel={session?.user?.name ?? session?.user?.email ?? ''} />
+      <Header
+        userLabel={session?.user?.name ?? session?.user?.email ?? ''}
+        isAdmin={session?.user?.role === 'ADMIN'}
+      />
       <div className="flex flex-1 overflow-hidden">
         <div className="h-full w-64 border-r">
           <TaskHistorySidebar />
