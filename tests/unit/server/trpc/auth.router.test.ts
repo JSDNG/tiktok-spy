@@ -11,11 +11,25 @@ describe('auth router', () => {
     expect(result.email).toBe(email);
   });
 
-  it('rejects a weak password', async () => {
+  it('rejects a weak password with a specific, human-readable reason', async () => {
     const caller = createCaller({ userId: undefined, role: undefined });
     await expect(
       caller.auth.register({ email: `w-${Date.now()}@example.com`, password: 'short' }),
-    ).rejects.toThrow();
+    ).rejects.toMatchObject({
+      message: expect.stringContaining('Mật khẩu phải có ít nhất 8 ký tự'),
+    });
+  });
+
+  it('reports missing digit and missing letter separately, not a generic "Invalid"', async () => {
+    const caller = createCaller({ userId: undefined, role: undefined });
+
+    await expect(
+      caller.auth.register({ email: `w-${Date.now()}-1@example.com`, password: 'onlyletters' }),
+    ).rejects.toMatchObject({ message: expect.stringContaining('Mật khẩu phải chứa ít nhất 1 chữ số') });
+
+    await expect(
+      caller.auth.register({ email: `w-${Date.now()}-2@example.com`, password: '12345678' }),
+    ).rejects.toMatchObject({ message: expect.stringContaining('Mật khẩu phải chứa ít nhất 1 chữ cái') });
   });
 
   it('returns CONFLICT for a duplicate email', async () => {
