@@ -2,13 +2,7 @@
 
 import { AuthError } from 'next-auth';
 import { signIn } from '@/server/auth';
-
-// Chỉ chấp nhận đường dẫn nội bộ tương đối ("/xyz") — callbackUrl đến từ query string
-// do người dùng kiểm soát, nếu dùng thẳng làm redirectTo sẽ mở lỗ hổng open-redirect.
-function sanitizeRedirect(value: FormDataEntryValue | null): string {
-  if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//')) return '/';
-  return value;
-}
+import { sanitizeRedirect } from '@/lib/safeRedirect';
 
 export async function loginAction(_prevState: string | undefined, formData: FormData) {
   try {
